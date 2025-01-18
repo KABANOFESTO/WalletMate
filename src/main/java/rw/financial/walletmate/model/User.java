@@ -28,7 +28,10 @@ public class User {
 
     // Role field - Enum representing user roles (ADMIN, USER)
     @Enumerated(EnumType.STRING)
-    private Role role;  
+    private Role role; 
+    
+    @Column
+    private String profilePicture;
 
     // Token for password reset functionality
     @Column(name = "reset_password_token")
