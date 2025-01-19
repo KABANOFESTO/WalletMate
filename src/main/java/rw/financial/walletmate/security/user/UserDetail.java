@@ -1,6 +1,7 @@
 package rw.financial.walletmate.security.user;
 
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,6 +10,7 @@ import lombok.Setter;
 import rw.financial.walletmate.model.User;
 
 import java.util.Collection;
+import java.util.Collections;
 
 @Getter
 @Setter
@@ -28,47 +30,49 @@ public class UserDetail implements UserDetails {
      * @return VubaDetails instance
      */
     public static UserDetail buildUserDetails(User user) {
-        // Removed roles mapping logic; simply return the essential user details
+        // Create authority from user role
+        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
+        
         return new UserDetail(
                 user.getId(),
                 user.getEmail(),
                 user.getPassword(),
-                null // Authorities or roles are no longer being set
+                Collections.singletonList(authority)
         );
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return authorities; // Return empty or null as roles functionality is removed
+        return authorities;
     }
 
     @Override
     public String getPassword() {
-        return password; // Return user's encoded password
+        return password;
     }
 
     @Override
     public String getUsername() {
-        return email; // Use email as username
+        return email;
     }
 
     @Override
     public boolean isAccountNonExpired() {
-        return true; // All accounts are non-expired by default
+        return true;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return true; // Assume accounts are not locked
+        return true;
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return true; // Credentials are considered non-expired
+        return true;
     }
 
     @Override
     public boolean isEnabled() {
-        return true; // Assume user is enabled by default
+        return true;
     }
 }

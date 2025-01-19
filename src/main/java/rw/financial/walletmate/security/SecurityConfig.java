@@ -2,46 +2,44 @@ package rw.financial.walletmate.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import rw.financial.walletmate.security.jwt.AuthTokenFilter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import rw.financial.walletmate.security.user.UserDetailService;
 
 @Configuration
-@EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+    
+    private final UserDetailService userDetailsService;
 
-    private final AuthTokenFilter authTokenFilter;
-
-    // Add constructor to inject AuthTokenFilter
-    public SecurityConfig(AuthTokenFilter authTokenFilter) {
-        this.authTokenFilter = authTokenFilter;
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        logger.debug("Creating BCryptPasswordEncoder bean");
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .cors(cors -> cors.configurationSource(
-                        request -> new org.springframework.web.cors.CorsConfiguration().applyPermitDefaultValues()))
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/users/signup",
-                                "/api/users/login",
-                                "/api/users/all",
-                                "/auth/forgot-password",
-                                "/auth/reset-password",
-                                "/api/bookings/**",
-                                "/bookings/{id}/status",
-                                "/api/users/delete/**",
-                                "/auth/**",
-                                "/code**/",
-                                "/public/**")
-                        .permitAll()
-                        .anyRequest().authenticated())
-                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
+    public DaoAuthenticationProvider authenticationProvider() {
+        logger.debug("Creating DaoAuthenticationProvider bean");
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        
+        logger.debug("Configured DaoAuthenticationProvider with UserDetailsService and PasswordEncoder");
+        return authProvider;
+    }
 
-        return http.build();
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        logger.debug("Creating AuthenticationManager bean");
+        return authConfig.getAuthenticationManager();
     }
 }

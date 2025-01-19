@@ -1,42 +1,44 @@
 package rw.financial.walletmate.security.jwt;
 
-import org.springframework.stereotype.Component;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.stereotype.Component;
 
-import org.springframework.http.MediaType;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.web.AuthenticationEntryPoint;
-
 @Component
 public class JwtAuthEntryPoint implements AuthenticationEntryPoint {
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthEntryPoint.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
-            AuthenticationException authException) throws IOException, ServletException {
-                
-        // Setting response properties
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            AuthenticationException authException) throws IOException {
+        logger.error("Unauthorized error: {}", authException.getMessage());
+        logger.debug("Request URI: {}", request.getRequestURI());
+        logger.debug("Request method: {}", request.getMethod());
+        logger.debug("Authorization header: {}", request.getHeader("Authorization"));
+        
+        response.setContentType("application/json");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-
-        // Creating the body of the response
-        final Map<String, Object> body = new HashMap<>();
-        body.put("status", HttpServletResponse.SC_UNAUTHORIZED);
-        body.put("error", "Unauthorized");
-        body.put("message", authException.getMessage());
-        body.put("path", request.getServletPath());
-
-        // Writing the response body as JSON
-        final ObjectMapper mapper = new ObjectMapper();
-        mapper.writeValue(response.getOutputStream(), body);
+        
+        Map<String, Object> errorDetails = new HashMap<>();
+        errorDetails.put("status", HttpServletResponse.SC_UNAUTHORIZED);
+        errorDetails.put("error", "Unauthorized");
+        errorDetails.put("message", authException.getMessage());
+        errorDetails.put("path", request.getRequestURI());
+        errorDetails.put("timestamp", new Date());
+        
+        String jsonError = objectMapper.writeValueAsString(errorDetails);
+        response.getWriter().write(jsonError);
     }
 }

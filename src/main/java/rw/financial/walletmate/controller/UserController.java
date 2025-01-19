@@ -1,5 +1,7 @@
 package rw.financial.walletmate.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -19,65 +21,37 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     private final IUserService userService;
-    private final JwtUtil jwtUtil; // Inject jwtUtil here
+    private final JwtUtil jwtUtil;
 
     public UserController(IUserService userService, JwtUtil jwtUtil) {
         this.userService = userService;
-        this.jwtUtil = jwtUtil; // Constructor injection for jwtUtil
+        this.jwtUtil = jwtUtil;
     }
 
     // Endpoint for user registration
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@RequestBody User user) {
         try {
+            logger.debug("Attempting to register new user with email: {}", user.getEmail());
+            
             // Set default role if not provided
             if (user.getRole() == null) {
-                user.setRole(Role.USER); // default to USER role
+                user.setRole(Role.USER);
+                logger.debug("Setting default role to USER for new user");
             }
+            
             userService.createUser(user);
-            return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully");
+            logger.info("Successfully registered new user with email: {}", user.getEmail());
+            
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body("User registered successfully");
         } catch (Exception e) {
+            logger.error("Error during user registration: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Error during user registration: " + e.getMessage());
-        }
-    }
-
-    // Endpoint for user login
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody User user) {
-        try {
-            System.out.println("Attempting to log in user with email: " + user.getEmail());
-
-            boolean isAuthenticated = userService.authenticateUser(user.getEmail(), user.getPassword());
-
-            // Log whether the authentication was successful
-            System.out.println("Authentication successful: " + isAuthenticated);
-
-            if (isAuthenticated) {
-                User authenticatedUser = userService.getUser(user.getEmail());
-
-                // Log the user's details
-                System.out.println("Authenticated user: " + authenticatedUser);
-
-                String token = jwtUtil.generateToken(authenticatedUser);
-
-                // Specify the type parameters for HashMap<String, String>
-                Map<String, String> response = new HashMap<String, String>();
-                response.put("message", "Login successful!");
-                response.put("token", token);
-
-                return ResponseEntity.ok(response); // Return response with message and token
-            } else {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
-            }
-        } catch (UsernameNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error during login: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error during login: " + e.getMessage());
+                .body("Error during user registration: " + e.getMessage());
         }
     }
 
@@ -89,11 +63,13 @@ public class UserController {
             String jwtToken = authorizationHeader.substring(7);
             Claims claims = jwtUtil.extractClaims(jwtToken);
 
-            // Extract the user's role from the token
-            String userRole = claims.get("role", String.class);
-
-            // Check if the user has ADMIN privileges
-            if (!Role.ADMIN.name().equals(userRole)) {
+            // Extract the user's roles from the token
+            @SuppressWarnings("unchecked")
+            List<String> roles = claims.get("roles", List.class);
+            
+            // Check if the user has ADMIN or USER role
+            if (roles == null || roles.isEmpty() || 
+                (!roles.contains(Role.ADMIN.name()) && !roles.contains(Role.USER.name()))) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: Insufficient privileges");
             }
 

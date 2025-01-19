@@ -17,7 +17,7 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
@@ -37,4 +37,3 @@ public class Account {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }
-

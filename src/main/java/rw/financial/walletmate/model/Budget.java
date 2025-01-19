@@ -55,4 +55,17 @@ public class Budget {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    @Override
+    public String toString() {
+        return "Budget{" +
+                "id=" + id +
+                ", userId=" + (user != null ? user.getId() : null) +
+                ", categoryId=" + (category != null ? category.getId() : null) +
+                ", subcategoryId=" + (subcategory != null ? subcategory.getId() : null) +
+                ", limit=" + limit +
+                ", startDate=" + startDate +
+                ", endDate=" + endDate +
+                '}';
+    }
 }

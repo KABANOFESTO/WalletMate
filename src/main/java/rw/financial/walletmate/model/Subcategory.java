@@ -9,11 +9,8 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "subcategories",
-    uniqueConstraints = @UniqueConstraint(
-        columnNames = {"user_id", "category_id", "name"}
-    )
-)
+@Table(name = "subcategories", uniqueConstraints = @UniqueConstraint(columnNames = { "user_id", "category_id",
+        "name" }))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,32 +18,36 @@ public class Subcategory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
-    
+
     @NotBlank
     @Size(min = 2, max = 50)
     @Column(name = "name", nullable = false)
     private String name;
-    
+
+    @Size(max = 255) // Optional: Limit the length of the description
+    @Column(name = "description")
+    private String description;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-    
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
     }
-    
+
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
