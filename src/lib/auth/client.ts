@@ -9,11 +9,13 @@ function generateToken(): string {
 }
 
 const user = {
-  id: 'USR-000',
-  avatar: '/assets/avatar.png',
-  firstName: 'Sofia',
-  lastName: 'Rivers',
+  id: 1,
+  name: 'Sofia Rivers',
   email: 'sofia@devias.io',
+  role: 'USER' as const,
+  profilePicture: '/assets/avatar.png',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
 } satisfies User;
 
 export interface SignUpParams {

@@ -38,6 +38,7 @@ interface DashboardData {
       id: number;
       name: string;
     };
+    description?: string;
     date: string;
   }>;
 }
@@ -59,35 +60,47 @@ const initialData: DashboardData = {
   recentTransactions: []
 };
 
-export default function Page(): React.JSX.Element {
+interface Transaction {
+  id: number;
+  amount: number;
+  type: 'INCOME' | 'EXPENSE';
+  category: {
+    id: number;
+    name: string;
+  };
+  description?: string;
+  date: string;
+}
+
+export default function DashboardPage(): React.JSX.Element {
   const { user } = useAuth();
-  const [data, setData] = React.useState(initialData);
-  const [loading, setLoading] = React.useState(true);
+  const [data, setData] = React.useState<DashboardData>(initialData);
+  const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  const handleFetchData = async (): Promise<void> => {
+    if (!user?.id) {
+      setError('User not authenticated');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const dashboardData = await getTransactionSummary(Number(user.id));
+      setData(prevData => ({
+        ...prevData,
+        ...dashboardData
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   React.useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.id) {
-        setError('User not authenticated');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const dashboardData = await getTransactionSummary(Number(user.id));
-        setData(prevData => ({
-          ...prevData,
-          ...dashboardData
-        }));
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-        setError('Failed to fetch dashboard data. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    void handleFetchData();
   }, [user?.id]);
 
   if (loading) {
@@ -98,7 +111,7 @@ export default function Page(): React.JSX.Element {
     return <div>Error: {error}</div>;
   }
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
@@ -163,8 +176,8 @@ export default function Page(): React.JSX.Element {
       </Grid>
       <Grid xs={12}>
         <RecentTransactions
-          transactions={data.recentTransactions.map((t: any) => ({
-            id: t.id,
+          transactions={data.recentTransactions.map((t: Transaction) => ({
+            id: t.id.toString(),
             category: t.category.name,
             date: dayjs(t.date).format('DD MMM YYYY'),
             description: t.description,

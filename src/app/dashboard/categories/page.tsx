@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, JSX } from 'react';
 import {
     Stack,
     Box,
@@ -21,13 +21,13 @@ import {
 import { Add, Edit, Delete } from '@mui/icons-material';
 
 // Define types for categories and subcategories
-type Category = {
+interface Category {
     id: number;
     name: string;
     subcategories: string[];
-};
+}
 
-export default function CategoriesPage() {
+export default function CategoriesPage(): JSX.Element {
     // Initial categories
     const initialCategories: Category[] = [
         { id: 1, name: 'Food', subcategories: ['Groceries', 'Dining Out'] },
@@ -43,7 +43,7 @@ export default function CategoriesPage() {
     const [subcategories, setSubcategories] = useState<string[]>([]);
 
     // Open dialog for adding/editing category
-    const handleOpenDialog = (category: Category | null = null) => {
+    const handleOpenDialog = (category: Category | null = null): void => {
         if (category) {
             setEditingCategory(category);
             setCategoryName(category.name);
@@ -56,12 +56,12 @@ export default function CategoriesPage() {
         setOpenDialog(true);
     };
 
-    const handleCloseDialog = () => {
+    const handleCloseDialog = (): void => {
         setOpenDialog(false);
     };
 
     // Save a category
-    const handleSaveCategory = () => {
+    const handleSaveCategory = (): void => {
         if (editingCategory) {
             // Edit existing category
             setCategories((prev) =>
@@ -84,24 +84,24 @@ export default function CategoriesPage() {
     };
 
     // Delete a category
-    const handleDeleteCategory = (id: number) => {
-        setCategories((prev) => prev.filter((cat) => cat.id !== id));
+    const handleDeleteCategory = (id: string): void => {
+        setCategories((prev) => prev.filter((cat) => cat.id.toString() !== id));
     };
 
     // Add a new subcategory
-    const handleAddSubcategory = () => {
+    const handleAddSubcategory = (): void => {
         setSubcategories((prev) => [...prev, '']);
     };
 
     // Update a subcategory
-    const handleUpdateSubcategory = (index: number, value: string) => {
+    const handleUpdateSubcategory = (index: number, value: string): void => {
         setSubcategories((prev) =>
             prev.map((sub, i) => (i === index ? value : sub))
         );
     };
 
     // Delete a subcategory
-    const handleDeleteSubcategory = (index: number) => {
+    const handleDeleteSubcategory = (index: number): void => {
         setSubcategories((prev) => prev.filter((_, i) => i !== index));
     };
 
@@ -123,7 +123,7 @@ export default function CategoriesPage() {
             </Box>
 
             <Grid container spacing={3}>
-                {categories.map((category) => (
+                {categories.map((category, index) => (
                     <Grid item xs={12} sm={6} md={4} key={category.id}>
                         <Card sx={{ p: 3 }}>
                             <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -145,7 +145,7 @@ export default function CategoriesPage() {
                                 </IconButton>
                                 <IconButton
                                     color="error"
-                                    onClick={() => handleDeleteCategory(category.id)}
+                                    onClick={() => handleDeleteCategory(category.id.toString())}
                                 >
                                     <Delete />
                                 </IconButton>

@@ -17,8 +17,7 @@ import Link from '@mui/material/Link';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { Eye as EyeIcon } from '@phosphor-icons/react';
-import { EyeSlash as EyeSlashIcon } from '@phosphor-icons/react';
+import { Eye, EyeSlash } from '@phosphor-icons/react';
 
 import { paths } from '@/paths';
 
@@ -49,12 +48,16 @@ export function SignInForm(): React.JSX.Element {
     validationSchema,
     onSubmit: async (values, helpers) => {
       try {
-        const user = await login({
+        const response = await login({
           email: values.email,
           password: values.password
         });
-        setUser(user);
-        router.push('/dashboard');
+        if (response.user) {
+          setUser(response.user);
+          router.push('/dashboard');
+        } else {
+          throw new Error(response.error || 'Login failed');
+        }
       } catch (err) {
         helpers.setStatus({ success: false });
         helpers.setErrors({ submit: 'Invalid email or password' });
@@ -106,14 +109,16 @@ export function SignInForm(): React.JSX.Element {
               endAdornment={
                 <IconButton
                   aria-label="toggle password visibility"
-                  onClick={(): void => setShowPassword((prev) => !prev)}
+                  onClick={() => {
+                    setShowPassword(!showPassword);
+                  }}
                   edge="end"
                   sx={{ mr: -1 }}
                 >
                   {showPassword ? (
-                    <EyeSlashIcon fontSize="var(--icon-fontSize-md)" />
+                    <EyeSlash fontSize="var(--icon-fontSize-md)" />
                   ) : (
-                    <EyeIcon fontSize="var(--icon-fontSize-md)" />
+                    <Eye fontSize="var(--icon-fontSize-md)" />
                   )}
                 </IconButton>
               }

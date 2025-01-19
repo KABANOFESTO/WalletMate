@@ -1,21 +1,12 @@
 'use client';
 
-import * as React from "react";
-import type { Metadata } from "next";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Pagination from "@mui/material/Pagination";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
+import React, { useState, useMemo } from 'react';
+import type { JSX } from 'react';
+import { useMediaQuery, useTheme, Box, Button, Pagination, Stack, Typography, Chip, Avatar, Card, InputAdornment } from '@mui/material';
 import Grid from "@mui/material/Unstable_Grid2";
-import Card from "@mui/material/Card";
-import InputAdornment from "@mui/material/InputAdornment";
-import OutlinedInput from "@mui/material/OutlinedInput";
-import { Download, PlusCircle, Upload, Search, TrendingUp, Wallet, DollarSign } from "lucide-react";
+import { DotsThreeVertical, Plus, ArrowDown, ArrowUp } from "@phosphor-icons/react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { useMediaQuery, useTheme, Chip, Avatar } from "@mui/material";
-import { AddAccountDialog } from "@/components/dashboard/account/add-account";
 
 // Add RelativeTime plugin to dayjs
 dayjs.extend(relativeTime);
@@ -32,7 +23,7 @@ export interface Account {
 }
 
 // Example accounts data
-const accounts: Account[] = [
+const defaultAccounts: Account[] = [
   {
     id: "ACC-001",
     name: "Personal Savings",
@@ -55,7 +46,7 @@ function StatsCard({
   title: string;
   value: string;
   trend?: string;
-}): React.JSX.Element {
+}): JSX.Element {
   return (
     <Card
       sx={{
@@ -90,7 +81,7 @@ function StatsCard({
       <Typography color="text.secondary" variant="body2">
         {title}
       </Typography>
-      {trend && (
+      {Boolean(trend) && (
         <Chip
           size="small"
           label={trend}
@@ -103,7 +94,7 @@ function StatsCard({
 }
 
 // Filter component
-function AccountsFilter(): React.JSX.Element {
+function AccountsFilter(): JSX.Element {
   return (
     <Card
       elevation={0}
@@ -116,34 +107,20 @@ function AccountsFilter(): React.JSX.Element {
         borderColor: 'divider',
       }}
     >
-      <OutlinedInput
-        fullWidth
-        placeholder="Search accounts..."
-        startAdornment={
-          <InputAdornment position="start">
-            <Search size={20} />
-          </InputAdornment>
-        }
-        sx={{
-          borderRadius: 3,
-          '& .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'transparent',
-          },
-          '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'transparent',
-          },
-          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'primary.main',
-          },
-        }}
-      />
+      <InputAdornment position="start">
+        <DotsThreeVertical size={20} />
+      </InputAdornment>
+      <InputAdornment position="end">
+        <ArrowDown size={20} />
+        <ArrowUp size={20} />
+      </InputAdornment>
     </Card>
   );
 }
 
 // Account Card component
-function AccountCard({ account }: { account: Account }): React.JSX.Element {
-  const formattedDate = React.useMemo(() => {
+function AccountCard({ account }: { account: Account }): JSX.Element {
+  const formattedDate = useMemo(() => {
     return dayjs(account.updatedAt).fromNow();
   }, [account.updatedAt]);
 
@@ -197,127 +174,86 @@ function AccountCard({ account }: { account: Account }): React.JSX.Element {
 }
 
 // Calculate total balance
-const calculateTotalBalance = (accounts: Account[]): number => {
-  return accounts.reduce((total, account) => {
+const calculateTotalBalance = (accountList: Account[]): number => {
+  return accountList.reduce((total, account) => {
     if (account.currency === 'EUR') {
-      return total + (account.balance * 1.1);
+      return total + account.balance * 1.1; // Example conversion rate
+    }
+    if (account.currency === 'GBP') {
+      return total + account.balance * 1.3; // Example conversion rate
     }
     return total + account.balance;
   }, 0);
 };
 
 // Main Client Component
-export default function AccountsPage(): React.JSX.Element {
+export default function AccountsPage(): JSX.Element {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const totalBalance = React.useMemo(() => calculateTotalBalance(accounts), []);
+  const _isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const [accounts, _setAccounts] = useState<Account[]>(defaultAccounts);
+  const [_page, _setPage] = useState(1);
 
-  // State to manage dialog visibility
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const totalBalance = calculateTotalBalance(accounts);
 
-  const handleDialogOpen = () => setIsDialogOpen(true);
-  const handleDialogClose = () => setIsDialogOpen(false);
+  const handleAddAccount = (): void => {
+    // Add account functionality will be implemented later
+  };
 
   return (
-    <Stack spacing={4}>
-      <Box sx={{ mb: 2 }}>
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={2}
-          justifyContent="space-between"
-          alignItems={{ xs: 'flex-start', sm: 'center' }}
-          sx={{ mb: 4 }}
+    <Stack spacing={3}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4">Accounts</Typography>
+        <Button
+          variant="contained"
+          startIcon={<Plus />}
+          onClick={handleAddAccount}
+          sx={{ borderRadius: 3 }}
         >
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            Accounts Dashboard
-          </Typography>
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="outlined"
-              startIcon={<Upload size={20} />}
-              sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-              }}
-            >
-              Import
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<PlusCircle size={20} />}
-              onClick={handleDialogOpen}
-              sx={{
-                borderRadius: 2,
-                textTransform: "none",
-                boxShadow: "none",
-                "&:hover": {
-                  boxShadow: "none",
-                },
-              }}
-            >
-              Add Account
-            </Button>
-          </Stack>
-        </Stack>
-
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid xs={12} sm={6} md={4}>
-            <StatsCard
-              icon={Wallet}
-              title="Total Balance"
-              value={`$${totalBalance.toLocaleString()}`}
-              trend="+12.5%"
-            />
-          </Grid>
-          <Grid xs={12} sm={6} md={4}>
-            <StatsCard
-              icon={DollarSign}
-              title="Monthly Income"
-              value="$12,345.67"
-              trend="+8.2%"
-            />
-          </Grid>
-          <Grid xs={12} sm={6} md={4}>
-            <StatsCard
-              icon={TrendingUp}
-              title="Active Accounts"
-              value={accounts.length.toString()}
-            />
-          </Grid>
-        </Grid>
+          Add Account
+        </Button>
       </Box>
+
+      <Grid container spacing={3}>
+        <Grid xs={12} md={4}>
+          <StatsCard
+            icon={DotsThreeVertical}
+            title="Total Balance"
+            value={`$${totalBalance.toLocaleString()}`}
+            trend="+14% from last month"
+          />
+        </Grid>
+        <Grid xs={12} md={4}>
+          <StatsCard
+            icon={ArrowDown}
+            title="Monthly Growth"
+            value="8.5%"
+            trend="Positive trend"
+          />
+        </Grid>
+        <Grid xs={12} md={4}>
+          <StatsCard
+            icon={ArrowUp}
+            title="Average Balance"
+            value={`$${(totalBalance / accounts.length).toLocaleString()}`}
+          />
+        </Grid>
+      </Grid>
 
       <AccountsFilter />
 
       <Grid container spacing={3}>
         {accounts.map((account) => (
-          <Grid key={account.id} xs={12} sm={6} lg={4}>
+          <Grid key={account.id} xs={12} sm={6} md={4}>
             <AccountCard account={account} />
           </Grid>
         ))}
       </Grid>
 
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <Pagination
-          count={3}
-          size={isMobile ? "small" : "medium"}
-          sx={{
-            '& .MuiPaginationItem-root': {
-              borderRadius: 2,
-              '&.Mui-selected': {
-                backgroundColor: 'primary.main',
-                color: 'primary.contrastText',
-                '&:hover': {
-                  backgroundColor: 'primary.dark',
-                },
-              },
-            },
-          }}
-        />
-      </Box>
-
-      {/* AddAccountDialog with required props */}
-      <AddAccountDialog open={isDialogOpen} onClose={handleDialogClose} />
+      {accounts.length > 6 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Pagination count={Math.ceil(accounts.length / 6)} color="primary" />
+        </Box>
+      )}
     </Stack>
   );
 }

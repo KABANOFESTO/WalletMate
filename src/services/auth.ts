@@ -1,4 +1,5 @@
 import { config } from '@/config';
+import axios from 'axios';
 
 interface LoginCredentials {
   email: string;
@@ -9,158 +10,83 @@ interface RegisterCredentials extends LoginCredentials {
   name: string;
 }
 
-export async function login(credentials: LoginCredentials) {
-  console.log('Attempting login with:', { 
-    email: credentials.email,
-    passwordLength: credentials.password?.length || 0,
-    url: `${config.apiUrl}/api/auth/login` 
-  });
-  
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  profilePicture: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getUser(): Promise<User | null> {
   try {
-    const response = await fetch(`${config.apiUrl}/api/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(credentials),
-      credentials: 'include',
-    });
+    const response = await axios.get<{ user: User }>('/api/auth/me');
+    return response.data.user;
+  } catch (error) {
+    return null;
+  }
+}
 
-    const responseText = await response.text();
-    console.log('Raw server response:', responseText);
-
-    if (!response.ok) {
-      console.error('Login failed:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: responseText
-      });
-      throw new Error(responseText || 'Login failed');
-    }
-
-    let data;
-    try {
-      data = responseText ? JSON.parse(responseText) : null;
-      console.log('Parsed response data:', data);
-    } catch (e) {
-      console.error('Failed to parse response as JSON:', e);
-      throw new Error('Invalid response format from server');
-    }
-
-    // Check the exact structure of the response
-    console.log('Response structure:', {
-      hasData: !!data,
-      hasUser: data && !!data.user,
-      userFields: data?.user ? Object.keys(data.user) : [],
-      fullData: data
-    });
+export async function login(credentials: LoginCredentials): Promise<{ user: User | null; error?: string }> {
+  try {
+    const response = await axios.post<{ user: User; token: string }>('/api/auth/login', credentials);
+    const { user, token } = response.data;
     
-    if (!data) {
-      throw new Error('Empty response from server');
+    if (!user) {
+      return { user: null, error: 'Invalid credentials' };
     }
 
-    // Handle both possible response formats
-    const userData = data.user || data;
-    
-    if (!userData || typeof userData.id === 'undefined') {
-      console.error('Invalid user data structure:', userData);
-      throw new Error('Invalid user data received from server');
-    }
-
-    // Transform the user data to match our User type
-    const user = {
-      id: String(userData.id),
-      name: userData.name || '',
-      email: userData.email || '',
-      role: userData.role || 'USER',
-      profilePicture: userData.profilePicture,
-      createdAt: userData.createdAt || new Date().toISOString(),
-      updatedAt: userData.updatedAt || new Date().toISOString()
+    localStorage.setItem('custom-auth-token', token);
+    const transformedUser: User = {
+      id: String(user.id),
+      name: user.name || '',
+      email: user.email || '',
+      role: user.role || 'USER',
+      profilePicture: user.profilePicture,
+      createdAt: user.createdAt || new Date().toISOString(),
+      updatedAt: user.updatedAt || new Date().toISOString()
     };
-
-    console.log('Transformed user data:', user);
-
-    // Store auth data in localStorage
-    if (data.token) {
-      localStorage.setItem('custom-auth-token', data.token);
-    }
-    localStorage.setItem('user', JSON.stringify(user));
-
-    return user;
+    localStorage.setItem('user', JSON.stringify(transformedUser));
+    return { user: transformedUser };
   } catch (error) {
-    console.error('Login error:', error);
+    return { user: null, error: 'Login failed' };
+  }
+}
+
+export async function register(credentials: RegisterCredentials): Promise<any> {
+  try {
+    const response = await axios.post<{ user: User; token: string }>('/api/auth/register', credentials);
+    const { user, token } = response.data;
+    
+    if (!user) {
+      throw new Error('Registration failed');
+    }
+
+    localStorage.setItem('custom-auth-token', token);
+    const transformedUser: User = {
+      id: String(user.id),
+      name: user.name || '',
+      email: user.email || '',
+      role: user.role || 'USER',
+      profilePicture: user.profilePicture,
+      createdAt: user.createdAt || new Date().toISOString(),
+      updatedAt: user.updatedAt || new Date().toISOString()
+    };
+    localStorage.setItem('user', JSON.stringify(transformedUser));
+    return { user: transformedUser };
+  } catch (error) {
     throw error;
   }
 }
 
-export async function register(credentials: RegisterCredentials) {
+export async function logout(): Promise<void> {
   try {
-    const response = await fetch(`${config.apiUrl}/api/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    });
-
-    const responseText = await response.text();
-    console.log('Raw response:', responseText);
-
-    if (!response.ok) {
-      console.error('Registration failed:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: responseText
-      });
-      throw new Error(responseText || 'Registration failed');
-    }
-
-    let data;
-    try {
-      data = responseText ? JSON.parse(responseText) : null;
-    } catch (e) {
-      console.error('Failed to parse response as JSON:', e);
-      throw new Error('Invalid response format from server');
-    }
-
-    console.log('Registration response data:', data);
-    return data;
-  } catch (error) {
-    console.error('Registration error:', error);
-    throw error;
-  }
-}
-
-export async function logout() {
-  try {
-    const response = await fetch(`${config.apiUrl}/api/auth/logout`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    });
-
-    const responseText = await response.text();
-    console.log('Raw response:', responseText);
-
-    if (!response.ok) {
-      console.error('Logout failed:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: responseText
-      });
-      throw new Error(responseText || 'Logout failed');
-    }
-
-    // Clear localStorage even if the API call fails
+    await axios.post('/api/auth/logout');
     localStorage.removeItem('custom-auth-token');
     localStorage.removeItem('user');
-
-    console.log('Logout response data:', responseText);
   } catch (error) {
-    console.error('Logout error:', error);
     throw error;
   }
 }

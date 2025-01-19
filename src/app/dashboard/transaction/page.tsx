@@ -8,10 +8,10 @@ import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { useAuth } from '@/hooks/use-auth';
-import { 
-  getUserTransactions, 
+import {
+  getUserTransactions,
   getTransactionSummary,
-  type Transaction as BackendTransaction 
+  type Transaction as BackendTransaction
 } from '@/services/transaction';
 import { TransactionsFilters } from '@/components/dashboard/Transactions/TransactionsFilters';
 import { TransactionsTable } from '@/components/dashboard/Transactions/TransactionsTable';
@@ -43,16 +43,22 @@ export default function Page(): React.JSX.Element {
     type: '',
     categoryId: undefined as number | undefined,
     search: ''
+  } as {
+    startDate: string;
+    endDate: string;
+    type: string;
+    categoryId?: number | undefined;
+    search: string;
   });
 
   // Fetch transactions when filters change
   React.useEffect(() => {
     const fetchTransactions = async () => {
       if (!user?.id) return;
-      
+
       setLoading(true);
       setError(null);
-      
+
       try {
         const [transactions, summary] = await Promise.all([
           getUserTransactions(
@@ -109,8 +115,14 @@ export default function Page(): React.JSX.Element {
     }
   };
 
-  const handleFilterChange = (newFilters: typeof filters) => {
-    setFilters(newFilters);
+  const handleFilterChange = (filters: {
+    startDate: string;
+    endDate: string;
+    type: string;
+    categoryId?: number;
+    search: string;
+  }) => {
+    setFilters(filters);
     setPage(0);
   };
 
