@@ -4,15 +4,20 @@ services:
   mysql:
     image: mysql:8.0
     container_name: walletmate-mysql
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
     environment:
-      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_ROOT_PASSWORD: 123456
       MYSQL_DATABASE: walletmate
-      MYSQL_USER: walletmate
-      MYSQL_PASSWORD: walletmate123
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 123456
     ports:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -28,16 +33,13 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - DB_URL=jdbc:mysql://mysql:3306/walletmate?createDatabaseIfNotExist=true
-      - DB_USERNAME=walletmate
-      - DB_PASSWORD=walletmate123
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/walletmate?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
       - SERVER_PORT=8081
       - JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
       - JWT_EXPIRATION=86400000
-      - SPRING_MAIL_HOST=smtp.gmail.com
-      - SPRING_MAIL_PORT=587
-      - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME}
-      - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD}
       - ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5501,http://localhost:3000
 
 volumes:
