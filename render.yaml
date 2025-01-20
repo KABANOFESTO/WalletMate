@@ -12,41 +12,9 @@ services:
         value: 8081
       - key: SPRING_PROFILES_ACTIVE
         value: prod
-      - key: DB_HOST
-        fromService:
-          type: mysql
-          name: walletmate-db
-          property: host
-      - key: DB_PORT
-        fromService:
-          type: mysql
-          name: walletmate-db
-          property: port
-      - key: DB_NAME
-        fromService:
-          type: mysql
-          name: walletmate-db
-          property: database
-      - key: DB_USERNAME
-        fromService:
-          type: mysql
-          name: walletmate-db
-          property: username
-      - key: DB_PASSWORD
-        fromService:
-          type: mysql
-          name: walletmate-db
-          property: password
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRATION
         value: 86400000
       - key: ALLOWED_ORIGINS
         value: https://*.onrender.com,http://localhost:5173,http://127.0.0.1:5501,http://localhost:3000
-    autoDeploy: false
-
-databases:
-  - name: walletmate-db
-    databaseName: walletmate
-    plan: free
-    ipAllowList: [] # only allow internal connections
