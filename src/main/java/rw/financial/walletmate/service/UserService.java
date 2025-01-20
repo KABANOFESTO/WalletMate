@@ -4,6 +4,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import rw.financial.walletmate.model.User;
 import rw.financial.walletmate.repository.UserRepository;
+import rw.financial.walletmate.service.NotificationService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.List;
@@ -13,10 +14,12 @@ public class UserService implements IUserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final NotificationService notificationService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, NotificationService notificationService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -25,7 +28,12 @@ public class UserService implements IUserService {
             throw new Exception("User with this email already exists");
         }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        
+        // Create default notifications for the new user
+        notificationService.createDefaultNotifications(savedUser);
+        
+        return savedUser;
     }
 
     @Override

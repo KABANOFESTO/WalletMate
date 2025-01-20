@@ -3,8 +3,10 @@ package rw.financial.walletmate.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import rw.financial.walletmate.model.Notification;
+import rw.financial.walletmate.model.User;
 import rw.financial.walletmate.repository.NotificationRepository;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -39,5 +41,24 @@ public class NotificationService {
     // Delete a notification
     public void deleteNotification(Long id) {
         notificationRepository.deleteById(id);
+    }
+
+    // Create default notifications for new user
+    public void createDefaultNotifications(User user) {
+        List<String> defaultMessages = Arrays.asList(
+            "🎉 Welcome to WalletMate! Start managing your finances smarter.",
+            "📊 Set up your first budget to track your spending",
+            "💰 Add your first transaction to start tracking your expenses",
+            "⚙️ Complete your profile settings to personalize your experience",
+            "📑 Check out our categories section to organize your transactions"
+        );
+
+        defaultMessages.forEach(message -> {
+            Notification notification = new Notification();
+            notification.setUser(user);
+            notification.setMessage(message);
+            notification.setIsRead(false);
+            createNotification(notification);
+        });
     }
 }

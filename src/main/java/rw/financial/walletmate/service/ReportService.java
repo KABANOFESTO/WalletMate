@@ -45,7 +45,8 @@ public class ReportService {
         try {
             // Input validation
             if (userId == null || startDate == null || endDate == null) {
-                logger.error("Missing required parameters: userId={}, startDate={}, endDate={}", userId, startDate, endDate);
+                logger.error("Missing required parameters: userId={}, startDate={}, endDate={}", userId, startDate,
+                        endDate);
                 throw new IllegalArgumentException("User ID, start date, and end date are required");
             }
             if (startDate.isAfter(endDate)) {
@@ -72,7 +73,7 @@ public class ReportService {
                 logger.error("Error fetching transactions: {}", e.getMessage(), e);
                 throw new RuntimeException("Failed to fetch transactions: " + e.getMessage(), e);
             }
-            
+
             // Initialize summary data
             BigDecimal totalIncome = BigDecimal.ZERO;
             BigDecimal totalExpense = BigDecimal.ZERO;
@@ -88,17 +89,17 @@ public class ReportService {
                         continue;
                     }
 
-                    logger.trace("Processing transaction: id={}, type={}, amount={}", 
-                               transaction.getId(), transaction.getType(), transaction.getAmount());
-                    
+                    logger.trace("Processing transaction: id={}, type={}, amount={}",
+                            transaction.getId(), transaction.getType(), transaction.getAmount());
+
                     BigDecimal amount = transaction.getAmount() != null ? transaction.getAmount() : BigDecimal.ZERO;
                     String transactionType = transaction.getType();
-                    
+
                     if (transactionType == null) {
                         logger.warn("Transaction {} has null type, skipping", transaction.getId());
                         continue;
                     }
-                    
+
                     // Update totals
                     if ("INCOME".equals(transactionType)) {
                         totalIncome = totalIncome.add(amount);
@@ -107,7 +108,8 @@ public class ReportService {
                         totalExpense = totalExpense.add(amount);
                         logger.trace("Added expense: {}, new total: {}", amount, totalExpense);
                     } else {
-                        logger.warn("Unknown transaction type: {} for transaction {}", transactionType, transaction.getId());
+                        logger.warn("Unknown transaction type: {} for transaction {}", transactionType,
+                                transaction.getId());
                     }
 
                     // Update category breakdown
@@ -117,13 +119,15 @@ public class ReportService {
 
                     categoryBreakdown.computeIfAbsent(categoryName, k -> {
                         logger.trace("Creating new category breakdown for: {}", k);
-                        return new HashMap<String, Object>() {{
-                            put("category", k);
-                            put("totalAmount", BigDecimal.ZERO);
-                            put("transactionCount", 0);
-                            put("expenses", BigDecimal.ZERO);
-                            put("income", BigDecimal.ZERO);
-                        }};
+                        return new HashMap<String, Object>() {
+                            {
+                                put("category", k);
+                                put("totalAmount", BigDecimal.ZERO);
+                                put("transactionCount", 0);
+                                put("expenses", BigDecimal.ZERO);
+                                put("income", BigDecimal.ZERO);
+                            }
+                        };
                     });
 
                     Map<String, Object> categoryData = categoryBreakdown.get(categoryName);
@@ -137,7 +141,7 @@ public class ReportService {
                         logger.trace("Updated category {} transactionCount: {} -> {}", categoryName, v, newCount);
                         return newCount;
                     });
-                    
+
                     if ("INCOME".equals(transactionType)) {
                         categoryData.compute("income", (k, v) -> {
                             BigDecimal newIncome = ((BigDecimal) v).add(amount);
@@ -155,7 +159,8 @@ public class ReportService {
                     // Update account summary
                     Account account = transaction.getAccount();
                     if (account == null) {
-                        logger.warn("Transaction {} has null account, skipping account summary update", transaction.getId());
+                        logger.warn("Transaction {} has null account, skipping account summary update",
+                                transaction.getId());
                         continue;
                     }
                     String accountName = account.getName();
@@ -163,14 +168,16 @@ public class ReportService {
 
                     accountSummary.computeIfAbsent(accountName, k -> {
                         logger.trace("Creating new account summary for: {}", k);
-                        return new HashMap<String, Object>() {{
-                            put("account", k);
-                            put("balance", BigDecimal.ZERO);
-                            put("transactionCount", 0);
-                            put("lastTransaction", null);
-                            put("income", BigDecimal.ZERO);
-                            put("expenses", BigDecimal.ZERO);
-                        }};
+                        return new HashMap<String, Object>() {
+                            {
+                                put("account", k);
+                                put("balance", BigDecimal.ZERO);
+                                put("transactionCount", 0);
+                                put("lastTransaction", null);
+                                put("income", BigDecimal.ZERO);
+                                put("expenses", BigDecimal.ZERO);
+                            }
+                        };
                     });
 
                     Map<String, Object> accountData = accountSummary.get(accountName);
@@ -205,16 +212,16 @@ public class ReportService {
                         });
                     }
                 } catch (Exception e) {
-                    logger.error("Error processing transaction {}: {}", 
-                               transaction != null ? transaction.getId() : "null", 
-                               e.getMessage(), e);
+                    logger.error("Error processing transaction {}: {}",
+                            transaction != null ? transaction.getId() : "null",
+                            e.getMessage(), e);
                     // Continue processing other transactions
                 }
             }
 
             // Build response
-            logger.debug("Building response with {} categories and {} accounts", 
-                       categoryBreakdown.size(), accountSummary.size());
+            logger.debug("Building response with {} categories and {} accounts",
+                    categoryBreakdown.size(), accountSummary.size());
             try {
                 response.put("userId", userId);
                 response.put("startDate", startDate);

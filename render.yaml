@@ -11,11 +11,6 @@ services:
         value: mysecretpassword
       - key: MYSQL_DATABASE
         value: walletmate
-      - key: MYSQL_USER
-        value: walletmate_user
-      - key: MYSQL_PASSWORD
-        sync: false
-        value: walletmate_password
     disk:
       name: mysql-data
       mountPath: /var/lib/mysql
@@ -29,17 +24,17 @@ services:
     buildCommand: ./mvnw clean package -DskipTests
     startCommand: java -jar -Dspring.profiles.active=prod target/*.jar
     envVars:
-      - key: SPRING_DATASOURCE_URL
-        value: jdbc:mysql://walletmate-mysql:3306/walletmate?allowPublicKeyRetrieval=true&useSSL=false&createDatabaseIfNotExist=true
-      - key: SPRING_DATASOURCE_USERNAME
-        value: walletmate_user
-      - key: SPRING_DATASOURCE_PASSWORD
+      - key: DB_HOST
+        value: walletmate-mysql
+      - key: DB_PORT
+        value: 3306
+      - key: DB_NAME
+        value: walletmate
+      - key: DB_USERNAME
+        value: root
+      - key: DB_PASSWORD
         sync: false
-        value: walletmate_password
-      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
-        value: update
-      - key: SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT
-        value: org.hibernate.dialect.MySQLDialect
+        value: mysecretpassword
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRATION
