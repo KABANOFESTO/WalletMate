@@ -21,10 +21,10 @@ public class JwtUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtUtil.class);
 
-    @Value("${auth.token.jwtSecret}")
+    @Value("${jwt.secret}")
     private String jwtSecret;
 
-    @Value("${auth.token.expirationInMs}")
+    @Value("${jwt.expiration}")
     private long jwtExpirationMs;
 
     private Key secretKey;

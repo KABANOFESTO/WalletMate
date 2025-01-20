@@ -5,8 +5,10 @@ services:
     image: mysql:8.0
     container_name: walletmate-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: root123
       MYSQL_DATABASE: walletmate
+      MYSQL_USER: walletmate
+      MYSQL_PASSWORD: walletmate123
     ports:
       - "3306:3306"
     volumes:
@@ -27,8 +29,8 @@ services:
       - "8081:8081"
     environment:
       - DB_URL=jdbc:mysql://mysql:3306/walletmate?createDatabaseIfNotExist=true
-      - DB_USERNAME=root
-      - DB_PASSWORD=123456
+      - DB_USERNAME=walletmate
+      - DB_PASSWORD=walletmate123
       - SERVER_PORT=8081
       - JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
       - JWT_EXPIRATION=86400000
