@@ -12,9 +12,6 @@ COPY --from=build /app/target/*.jar app.jar
 # Set environment variables
 ENV PORT=8081
 ENV SPRING_PROFILES_ACTIVE=prod
-ENV SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/walletmate?allowPublicKeyRetrieval=true&useSSL=false
-ENV SPRING_DATASOURCE_USERNAME=root
-ENV SPRING_DATASOURCE_PASSWORD=123456
 
 # Expose port
 EXPOSE 8081
