@@ -27,20 +27,21 @@ services:
   backend:
     build: .
     container_name: walletmate-backend
-    depends_on:
-      mysql:
-        condition: service_healthy
     ports:
       - "8081:8081"
     environment:
+      - PORT=8081
       - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/walletmate?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=123456
-      - SERVER_PORT=8081
+      - DB_HOST=host.docker.internal
+      - DB_PORT=3306
+      - DB_NAME=walletmate
+      - DB_USERNAME=root
+      - DB_PASSWORD=123456
       - JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
       - JWT_EXPIRATION=86400000
       - ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5501,http://localhost:3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   mysql-data:

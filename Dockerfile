@@ -12,6 +12,11 @@ COPY --from=build /app/target/*.jar app.jar
 # Set environment variables
 ENV PORT=8081
 ENV SPRING_PROFILES_ACTIVE=prod
+ENV DB_HOST=localhost
+ENV DB_PORT=3306
+ENV DB_NAME=walletmate
+ENV DB_USERNAME=root
+ENV DB_PASSWORD=123456
 
 # Expose port
 EXPOSE 8081
