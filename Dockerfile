@@ -9,13 +9,10 @@ FROM eclipse-temurin:17-jre-focal
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
-# Copy database initialization script
-COPY src/main/resources/db/init.sql /app/init.sql
-
-# Set production profile and default port for Render
-ENV SPRING_PROFILES_ACTIVE=prod
+# Set environment variables
 ENV PORT=8081
-ENV SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/walletmate?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+ENV SPRING_PROFILES_ACTIVE=prod
+ENV SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/walletmate?allowPublicKeyRetrieval=true&useSSL=false
 ENV SPRING_DATASOURCE_USERNAME=root
 ENV SPRING_DATASOURCE_PASSWORD=123456
 
