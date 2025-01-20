@@ -7,9 +7,15 @@ services:
     image: mysql:8.0
     envVars:
       - key: MYSQL_ROOT_PASSWORD
-        value: 123456
+        sync: false
+        value: mysecretpassword
       - key: MYSQL_DATABASE
         value: walletmate
+      - key: MYSQL_USER
+        value: walletmate_user
+      - key: MYSQL_PASSWORD
+        sync: false
+        value: walletmate_password
     disk:
       name: mysql-data
       mountPath: /var/lib/mysql
@@ -21,26 +27,26 @@ services:
     region: frankfurt
     plan: free
     buildCommand: ./mvnw clean package -DskipTests
-    startCommand: java -jar target/*.jar
+    startCommand: java -jar -Dspring.profiles.active=prod target/*.jar
     envVars:
-      - key: PORT
-        value: 8081
-      - key: SPRING_PROFILES_ACTIVE
-        value: prod
-      - key: MYSQL_URL
-        value: jdbc:mysql://walletmate-mysql:3306/walletmate?allowPublicKeyRetrieval=true&useSSL=false
-      - key: MYSQL_USER
-        value: root
-      - key: MYSQL_PASSWORD
-        value: 123456
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:mysql://walletmate-mysql:3306/walletmate?allowPublicKeyRetrieval=true&useSSL=false&createDatabaseIfNotExist=true
+      - key: SPRING_DATASOURCE_USERNAME
+        value: walletmate_user
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+        value: walletmate_password
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
+      - key: SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT
+        value: org.hibernate.dialect.MySQLDialect
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRATION
         value: 86400000
       - key: ALLOWED_ORIGINS
-        value: https://*.onrender.com,http://localhost:5173,http://127.0.0.1:5501,http://localhost:3000
+        value: https://*.onrender.com,http://localhost:5173
     healthCheckPath: /actuator/health
-    disk:
-      name: data
-      mountPath: /data
-      sizeGB: 1
+    healthCheckTimeout: 180
+    dependencies:
+      - walletmate-mysql
