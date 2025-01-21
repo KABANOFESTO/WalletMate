@@ -1,40 +1,25 @@
 services:
   - type: web
-    name: walletmate-mysql
+    name: walletmate
     env: docker
-    plan: free
     region: frankfurt
-    image: mysql:8.0
+    plan: free
+    dockerfilePath: ./Dockerfile
     envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
       - key: MYSQL_ROOT_PASSWORD
         sync: false
-        value: mysecretpassword
+        value: 123456
       - key: MYSQL_DATABASE
         value: walletmate
-    disk:
-      name: mysql-data
-      mountPath: /var/lib/mysql
-      sizeGB: 1
-
-  - type: web
-    name: walletmate-backend
-    env: docker
-    region: frankfurt
-    plan: free
-    buildCommand: ./mvnw clean package -DskipTests
-    startCommand: java -jar -Dspring.profiles.active=prod target/*.jar
-    envVars:
-      - key: DB_HOST
-        value: walletmate-mysql
-      - key: DB_PORT
-        value: 3306
-      - key: DB_NAME
-        value: walletmate
-      - key: DB_USERNAME
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:mysql://localhost:3306/walletmate
+      - key: SPRING_DATASOURCE_USERNAME
         value: root
-      - key: DB_PASSWORD
+      - key: SPRING_DATASOURCE_PASSWORD
         sync: false
-        value: mysecretpassword
+        value: 123456
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRATION
@@ -43,5 +28,7 @@ services:
         value: https://*.onrender.com,http://localhost:5173
     healthCheckPath: /actuator/health
     healthCheckTimeout: 180
-    dependencies:
-      - walletmate-mysql
+    disk:
+      name: data
+      mountPath: /var/lib/mysql
+      sizeGB: 1
