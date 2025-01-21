@@ -10,12 +10,13 @@ RUN mvn package -DskipTests
 # Final stage
 FROM eclipse-temurin:17-jre-focal
 
-# Install MySQL
+# Install MySQL and configure it
 RUN apt-get update && \
     apt-get install -y mysql-server curl && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /var/run/mysqld && \
-    chown -R mysql:mysql /var/run/mysqld
+    chown -R mysql:mysql /var/run/mysqld && \
+    echo '[mysqld]\nbind-address = 0.0.0.0\nport = 3306' > /etc/mysql/conf.d/mysql.cnf
 
 # Copy MySQL initialization script
 COPY update_password.sql /docker-entrypoint-initdb.d/
@@ -65,7 +66,7 @@ if ! pgrep mysqld > /dev/null; then
     exit 1
 fi
 
-if ! curl -f http://localhost:8081/actuator/health > /dev/null 2>&1; then
+if ! curl -f http://0.0.0.0:8081/actuator/health > /dev/null 2>&1; then
     echo "Application is not healthy"
     exit 1
 fi
