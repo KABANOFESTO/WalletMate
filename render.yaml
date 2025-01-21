@@ -4,6 +4,8 @@ services:
     env: docker
     region: frankfurt
     plan: free
+    repo: https://github.com/KABANOFESTO/WalletMate.git
+    branch: server-side
     dockerfilePath: ./Dockerfile
     envVars:
       - key: SPRING_PROFILES_ACTIVE
