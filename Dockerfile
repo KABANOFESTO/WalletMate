@@ -2,10 +2,10 @@
 FROM maven:3.9.6-eclipse-temurin-17-focal AS build
 WORKDIR /app
 COPY pom.xml .
-RUN mvn dependency:go-offline
+RUN mvn dependency:go-offline -Dmaven.repo.local=/root/.m2/repository
 
 COPY src ./src
-RUN mvn package -DskipTests
+RUN mvn package -DskipTests -Dmaven.repo.local=/root/.m2/repository
 
 # Final stage
 FROM eclipse-temurin:17-jre-focal
@@ -14,9 +14,9 @@ FROM eclipse-temurin:17-jre-focal
 RUN apt-get update && \
     apt-get install -y mysql-server curl && \
     rm -rf /var/lib/apt/lists/* && \
-    mkdir -p /var/run/mysqld && \
-    chown -R mysql:mysql /var/run/mysqld && \
-    echo '[mysqld]\nbind-address = 0.0.0.0\nport = 3306' > /etc/mysql/conf.d/mysql.cnf
+    mkdir -p /var/run/mysqld /var/lib/mysql && \
+    chown -R mysql:mysql /var/run/mysqld /var/lib/mysql && \
+    echo '[mysqld]\nbind-address = 0.0.0.0\nport = 3306\nmax_connections = 20\ninnodb_buffer_pool_size = 64M\nkey_buffer_size = 16M\nthread_cache_size = 4\nquery_cache_size = 8M' > /etc/mysql/conf.d/mysql.cnf
 
 # Copy MySQL initialization script
 COPY update_password.sql /docker-entrypoint-initdb.d/
@@ -31,29 +31,42 @@ COPY --from=build /app/target/*.jar app.jar
 # Set environment variables
 ENV PORT=8081
 ENV SPRING_PROFILES_ACTIVE=prod
-ENV SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/walletmate
+ENV SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/walletmate?useSSL=false
 ENV SPRING_DATASOURCE_USERNAME=root
 ENV SPRING_DATASOURCE_PASSWORD=123456
-
-# Expose port
-EXPOSE 8081 3306
 
 # Create startup script
 COPY <<EOF /app/start.sh
 #!/bin/bash
+
+# Initialize MySQL data directory if needed
+if [ ! -d "/var/lib/mysql/mysql" ]; then
+    mysqld --initialize-insecure --user=mysql
+fi
+
 # Start MySQL and wait for it to be ready
 service mysql start
-until mysqladmin ping -h localhost -u root -p\${MYSQL_ROOT_PASSWORD} --silent; do
-    echo "Waiting for MySQL to be ready..."
+max_tries=30
+count=0
+echo "Waiting for MySQL to start..."
+while ! mysqladmin ping -h localhost -u root -p\${MYSQL_ROOT_PASSWORD} --silent; do
     sleep 2
+    count=$((count+1))
+    if [ $count -ge $max_tries ]; then
+        echo "Failed to connect to MySQL after $max_tries attempts"
+        exit 1
+    fi
+    echo "Attempt $count of $max_tries..."
 done
 
 # Initialize database
+echo "Initializing database..."
 mysql -u root -p\${MYSQL_ROOT_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS \${MYSQL_DATABASE};"
 mysql -u root -p\${MYSQL_ROOT_PASSWORD} \${MYSQL_DATABASE} < /docker-entrypoint-initdb.d/update_password.sql
 
-# Start Spring Boot application
-java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -jar app.jar
+# Start Spring Boot application with memory constraints
+echo "Starting Spring Boot application..."
+java -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xmx256m -jar app.jar
 EOF
 
 RUN chmod +x /app/start.sh
@@ -79,6 +92,9 @@ RUN chmod +x /app/health.sh
 
 # Add health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD [ "/app/health.sh" ]
+
+# Expose ports
+EXPOSE 8081 3306
 
 # Run the startup script
 CMD ["/app/start.sh"]

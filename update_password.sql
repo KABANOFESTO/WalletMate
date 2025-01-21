@@ -30,4 +30,5 @@ CREATE TABLE IF NOT EXISTS budgets (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
-UPDATE users SET password=? WHERE email=?
+-- Insert initial admin user
+INSERT INTO users (email, password, name) VALUES ('admin@example.com', 'password123', 'Admin User');
