@@ -10,13 +10,14 @@ RUN mvn package -DskipTests -Dmaven.repo.local=/root/.m2/repository
 # Final stage
 FROM eclipse-temurin:17-jre-focal
 
-# Install MySQL and configure it
+# Install MySQL
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server curl && \
-    rm -rf /var/lib/apt/lists/* && \
-    mkdir -p /var/run/mysqld /var/lib/mysql && \
-    chown -R mysql:mysql /var/run/mysqld /var/lib/mysql && \
-    echo '[mysqld]\nuser=mysql\nbind-address=0.0.0.0\nport=3306\nmax_connections=20\ninnodb_buffer_pool_size=64M\nkey_buffer_size=16M\nthread_cache_size=4\nquery_cache_size=8M\nskip-host-cache\nskip-name-resolve' > /etc/mysql/conf.d/mysql.cnf
+    rm -rf /var/lib/apt/lists/*
+
+# Create MySQL directories
+RUN mkdir -p /var/run/mysqld /var/lib/mysql /docker-entrypoint-initdb.d && \
+    chown -R mysql:mysql /var/run/mysqld /var/lib/mysql
 
 # Copy MySQL initialization script
 COPY update_password.sql /docker-entrypoint-initdb.d/
@@ -35,50 +36,74 @@ ENV SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/walletmate?useSSL=false
 ENV SPRING_DATASOURCE_USERNAME=root
 ENV SPRING_DATASOURCE_PASSWORD=123456
 
+# Create MySQL config
+RUN echo '[mysqld]\n\
+user=mysql\n\
+pid-file=/var/run/mysqld/mysqld.pid\n\
+socket=/var/run/mysqld/mysqld.sock\n\
+bind-address=0.0.0.0\n\
+port=3306\n\
+basedir=/usr\n\
+datadir=/var/lib/mysql\n\
+tmpdir=/tmp\n\
+max_connections=20\n\
+innodb_buffer_pool_size=64M\n\
+key_buffer_size=16M\n\
+thread_cache_size=4\n\
+query_cache_size=8M\n\
+skip-host-cache\n\
+skip-name-resolve\n\
+' > /etc/mysql/conf.d/mysql.cnf
+
 # Create startup script
 COPY <<EOF /app/start.sh
 #!/bin/bash
 set -e
 
+echo "Setting up MySQL directories..."
+mkdir -p /var/run/mysqld /var/lib/mysql
+chown -R mysql:mysql /var/run/mysqld /var/lib/mysql /docker-entrypoint-initdb.d
+chmod 777 /var/run/mysqld
+
 # Initialize MySQL data directory if needed
 if [ ! -d "/var/lib/mysql/mysql" ]; then
     echo "Initializing MySQL data directory..."
-    mkdir -p /var/lib/mysql
-    chown -R mysql:mysql /var/lib/mysql
     mysqld --initialize-insecure --user=mysql
 fi
 
-# Create MySQL directories and set permissions
-mkdir -p /var/run/mysqld
-chown -R mysql:mysql /var/run/mysqld /var/lib/mysql
-
-# Start MySQL in the background
-echo "Starting MySQL..."
-mysqld --user=mysql &
+echo "Starting MySQL server..."
+mysqld --user=mysql --console &
 
 # Wait for MySQL to be ready
-max_tries=30
+max_tries=60
 count=0
 echo "Waiting for MySQL to start..."
-while ! mysqladmin ping -h localhost --silent; do
-    sleep 2
+until mysql --protocol=socket -uroot -hlocalhost --socket=/var/run/mysqld/mysqld.sock -e "SELECT 1" >/dev/null 2>&1; do
     count=$((count+1))
     if [ $count -ge $max_tries ]; then
         echo "Failed to connect to MySQL after $count attempts"
         exit 1
     fi
     echo "Attempt $count of $max_tries..."
+    sleep 2
 done
 
-# Set root password and create database
-echo "Configuring MySQL..."
-mysqladmin -u root password "\${MYSQL_ROOT_PASSWORD}"
-mysql -u root -p"\${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE IF NOT EXISTS \${MYSQL_DATABASE};"
-mysql -u root -p"\${MYSQL_ROOT_PASSWORD}" \${MYSQL_DATABASE} < /docker-entrypoint-initdb.d/update_password.sql
+echo "MySQL is up and running"
 
-# Start Spring Boot application with memory constraints
+echo "Configuring MySQL..."
+mysql --protocol=socket -uroot -hlocalhost --socket=/var/run/mysqld/mysqld.sock <<-EOSQL
+    ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${MYSQL_ROOT_PASSWORD}';
+    GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
+    GRANT ALL ON *.* TO 'root'@'%' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}' WITH GRANT OPTION;
+    FLUSH PRIVILEGES;
+    CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE};
+EOSQL
+
+echo "Importing database schema..."
+mysql --protocol=socket -uroot -p${MYSQL_ROOT_PASSWORD} -hlocalhost --socket=/var/run/mysqld/mysqld.sock ${MYSQL_DATABASE} < /docker-entrypoint-initdb.d/update_password.sql
+
 echo "Starting Spring Boot application..."
-java -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xmx256m -jar app.jar
+exec java -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xmx256m -jar app.jar
 EOF
 
 RUN chmod +x /app/start.sh
