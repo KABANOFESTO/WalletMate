@@ -12,7 +12,7 @@ FROM eclipse-temurin:17-jre-focal
 
 # Install MySQL
 RUN apt-get update && \
-    apt-get install -y mysql-server && \
+    apt-get install -y mysql-server curl && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /var/run/mysqld && \
     chown -R mysql:mysql /var/run/mysqld
@@ -40,13 +40,44 @@ EXPOSE 8081 3306
 # Create startup script
 COPY <<EOF /app/start.sh
 #!/bin/bash
+# Start MySQL and wait for it to be ready
 service mysql start
+until mysqladmin ping -h localhost -u root -p\${MYSQL_ROOT_PASSWORD} --silent; do
+    echo "Waiting for MySQL to be ready..."
+    sleep 2
+done
+
+# Initialize database
 mysql -u root -p\${MYSQL_ROOT_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS \${MYSQL_DATABASE};"
 mysql -u root -p\${MYSQL_ROOT_PASSWORD} \${MYSQL_DATABASE} < /docker-entrypoint-initdb.d/update_password.sql
+
+# Start Spring Boot application
 java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -jar app.jar
 EOF
 
 RUN chmod +x /app/start.sh
+
+# Create health check script
+COPY <<EOF /app/health.sh
+#!/bin/bash
+if ! pgrep mysqld > /dev/null; then
+    echo "MySQL is not running"
+    exit 1
+fi
+
+if ! curl -f http://localhost:8081/actuator/health > /dev/null 2>&1; then
+    echo "Application is not healthy"
+    exit 1
+fi
+
+echo "All services are healthy"
+exit 0
+EOF
+
+RUN chmod +x /app/health.sh
+
+# Add health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 CMD [ "/app/health.sh" ]
 
 # Run the startup script
 CMD ["/app/start.sh"]
