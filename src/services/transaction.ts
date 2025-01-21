@@ -50,6 +50,15 @@ export interface TransactionSummary {
   recentTransactions: Transaction[];
 }
 
+export interface CreateTransactionDto {
+  accountId: number;
+  type: 'INCOME' | 'EXPENSE';
+  amount: number;
+  categoryId: number;
+  description?: string;
+  date: string;
+}
+
 export async function getTransactionSummary(userId: number, period?: string): Promise<TransactionSummary> {
   try {
     const url = new URL(`${config.apiUrl}/api/transactions/summary/${userId}`);
@@ -65,13 +74,16 @@ export async function getTransactionSummary(userId: number, period?: string): Pr
   }
 }
 
-export async function createTransaction(transaction: Omit<Transaction, 'id'>): Promise<Transaction> {
+export async function createTransaction(transaction: CreateTransactionDto): Promise<Transaction> {
   try {
     const response = await axios.post<Transaction>(`${config.apiUrl}/api/transactions`, transaction, {
       headers: getAuthHeaders(),
     });
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
+    if (error.response) {
+      throw new Error(error.response.data.message || 'Failed to create transaction');
+    }
     throw new Error('Failed to create transaction');
   }
 }

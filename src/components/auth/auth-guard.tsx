@@ -31,8 +31,8 @@ export function AuthGuard({ children }: AuthGuardProps): React.JSX.Element | nul
     const userData = localStorage.getItem('user');
 
     if (!token || !userData) {
-      logger.debug('[AuthGuard]: User is not logged in, redirecting to sign in');
-      router.replace(paths.auth.signIn);
+      logger.debug('[AuthGuard]: User is not logged in, redirecting to login');
+      router.replace(paths.auth.login);
       return;
     }
 
@@ -49,16 +49,19 @@ export function AuthGuard({ children }: AuthGuardProps): React.JSX.Element | nul
     checkPermissions().catch(() => {
       // noop
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Expected
-  }, [user, error, isLoading]);
+  }, [user, isLoading, error]);
 
   if (isChecking) {
     return null;
   }
 
   if (error) {
-    return <Alert color="error">{error}</Alert>;
+    return (
+      <Alert severity="error" sx={{ m: 2 }}>
+        Failed to authenticate user
+      </Alert>
+    );
   }
 
-  return <React.Fragment>{children}</React.Fragment>;
+  return <>{children}</>;
 }

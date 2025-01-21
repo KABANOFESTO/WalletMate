@@ -24,7 +24,7 @@ export interface UserPopoverProps {
 }
 
 export function UserPopover({ anchorEl, onClose, open }: UserPopoverProps): React.JSX.Element {
-  const { checkSession } = useUser();
+  const { checkSession, user } = useUser();
 
   const router = useRouter();
 
@@ -57,9 +57,9 @@ export function UserPopover({ anchorEl, onClose, open }: UserPopoverProps): Reac
       slotProps={{ paper: { sx: { width: '240px' } } }}
     >
       <Box sx={{ p: '16px 20px ' }}>
-        <Typography variant="subtitle1">Festo KABANO</Typography>
+        <Typography variant="subtitle1">{user?.name || 'Guest User'}</Typography>
         <Typography color="text.secondary" variant="body2">
-          kabanofesto@gmail.com
+          {user?.email || 'No email'}
         </Typography>
       </Box>
       <Divider />

@@ -1,39 +1,18 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useMediaQuery, useTheme, Box, Button, Pagination, Stack, Typography, Chip, Avatar, Card, InputAdornment } from '@mui/material';
 import Grid from "@mui/material/Unstable_Grid2";
 import { DotsThreeVertical, Plus, ArrowDown, ArrowUp } from "@phosphor-icons/react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { accountService, type Account } from '@/services/account';
+import { useAuth } from '@/hooks/use-auth';
+import { AddAccountDialog } from '@/components/dashboard/account/add-account-dialog';
 
 // Add RelativeTime plugin to dayjs
 dayjs.extend(relativeTime);
-
-// Define the Account type
-export interface Account {
-  id: string;
-  name: string;
-  type: string;
-  balance: number;
-  currency: string;
-  logo: string;
-  updatedAt: Date | string;
-}
-
-// Example accounts data
-const defaultAccounts: Account[] = [
-  {
-    id: "ACC-001",
-    name: "Personal Savings",
-    type: "Savings",
-    balance: 12500.45,
-    currency: "USD",
-    logo: "/api/placeholder/48/48",
-    updatedAt: dayjs().subtract(10, "minute").toDate(),
-  },
-];
 
 // Stats Card Component
 function StatsCard({
@@ -120,7 +99,7 @@ function AccountsFilter(): JSX.Element {
 
 // Account Card component
 function AccountCard({ account }: { account: Account }): JSX.Element {
-  const formattedDate = useMemo(() => {
+  const formattedDate = React.useMemo(() => {
     return dayjs(account.updatedAt).fromNow();
   }, [account.updatedAt]);
 
@@ -141,12 +120,12 @@ function AccountCard({ account }: { account: Account }): JSX.Element {
       <Stack spacing={2}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Avatar
-            src={account.logo}
-            alt={account.name}
             sx={{ width: 48, height: 48, backgroundColor: 'primary.light' }}
-          />
+          >
+            {account.name.charAt(0).toUpperCase()}
+          </Avatar>
           <Chip
-            label={account.type}
+            label={account.accountTypeDisplay || account.type}
             size="small"
             sx={{
               borderRadius: 2,
@@ -160,7 +139,7 @@ function AccountCard({ account }: { account: Account }): JSX.Element {
             {account.name}
           </Typography>
           <Typography variant="h5" color="primary.main" sx={{ fontWeight: 600 }}>
-            {account.currency} {account.balance.toLocaleString()}
+            ${account.balance.toLocaleString()}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -174,29 +153,46 @@ function AccountCard({ account }: { account: Account }): JSX.Element {
 }
 
 // Calculate total balance
-const calculateTotalBalance = (accountList: Account[]): number => {
-  return accountList.reduce((total, account) => {
-    if (account.currency === 'EUR') {
-      return total + account.balance * 1.1; // Example conversion rate
-    }
-    if (account.currency === 'GBP') {
-      return total + account.balance * 1.3; // Example conversion rate
-    }
-    return total + account.balance;
-  }, 0);
+const calculateTotalBalance = (accounts: Account[]): number => {
+  return accounts.reduce((total, account) => total + account.balance, 0);
 };
 
 // Main Client Component
 export default function AccountsPage(): JSX.Element {
   const theme = useTheme();
   const _isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
-  const [accounts, _setAccounts] = useState<Account[]>(defaultAccounts);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [_page, _setPage] = useState(1);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const { user } = useAuth();
+
+  const fetchAccounts = async () => {
+    if (user?.id) {
+      try {
+        const data = await accountService.getUserAccounts(Number(user.id));
+        setAccounts(data);
+      } catch (error) {
+        console.error('Failed to fetch accounts:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [user?.id]);
 
   const totalBalance = calculateTotalBalance(accounts);
 
   const handleAddAccount = (): void => {
-    // Add account functionality will be implemented later
+    setIsAddDialogOpen(true);
+  };
+
+  const handleCloseDialog = (): void => {
+    setIsAddDialogOpen(false);
+  };
+
+  const handleAccountAdded = (): void => {
+    fetchAccounts();
   };
 
   return (
@@ -234,7 +230,7 @@ export default function AccountsPage(): JSX.Element {
           <StatsCard
             icon={ArrowUp}
             title="Average Balance"
-            value={`$${(totalBalance / accounts.length).toLocaleString()}`}
+            value={`$${(totalBalance / (accounts.length || 1)).toLocaleString()}`}
           />
         </Grid>
       </Grid>
@@ -254,6 +250,12 @@ export default function AccountsPage(): JSX.Element {
           <Pagination count={Math.ceil(accounts.length / 6)} color="primary" />
         </Box>
       )}
+
+      <AddAccountDialog
+        open={isAddDialogOpen}
+        onClose={handleCloseDialog}
+        onAccountAdded={handleAccountAdded}
+      />
     </Stack>
   );
 }

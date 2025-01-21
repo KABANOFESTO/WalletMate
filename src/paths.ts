@@ -2,7 +2,12 @@ import { Login } from "@mui/icons-material";
 
 export const paths = {
   home: '/',
-  auth: { signIn: '/auth/sign-in', signUp: '/auth/sign-up', resetPassword: '/auth/reset-password' },
+  auth: { 
+    login: '/auth/sign-in', 
+    signUp: '/auth/sign-up', 
+    forgotPassword: '/forgot-password',
+    resetPassword: '/reset-password'
+  },
   dashboard: {
     overview: '/dashboard',
     account: '/dashboard/accountDetail',

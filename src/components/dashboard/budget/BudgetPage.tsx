@@ -25,6 +25,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { PencilSimple as EditIcon, Trash as DeleteIcon, Plus as PlusIcon } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/use-auth';
 import { budgetService, type Budget, type CreateBudgetRequest, type Category } from '@/services/budget';
+import { categoryService } from '@/services/category';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import dayjs from 'dayjs';
 import { toast } from 'react-hot-toast';
@@ -32,7 +33,7 @@ import { toast } from 'react-hot-toast';
 // Pie chart colors
 const COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
 
-export default function BudgetPage() {
+export function BudgetPage(): JSX.Element {
   const { user } = useAuth();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -60,11 +61,13 @@ export default function BudgetPage() {
     }
   };
 
-  const fetchCategories = async (categoryId: number) => {
-    if (!user?.id) return;
-    
+  const fetchCategories = async () => {
     try {
-      const data = await budgetService.getCategories(Number(user.id), categoryId);
+      if (!user) {
+        toast.error('User not authenticated');
+        return;
+      }
+      const data = await categoryService.getCategories(Number(user.id));
       setCategories(data);
     } catch (error) {
       toast.error('Failed to fetch categories');
@@ -75,7 +78,7 @@ export default function BudgetPage() {
   useEffect(() => {
     const initializePage = async () => {
       setLoading(true);
-      await fetchBudgets();
+      await Promise.all([fetchBudgets(), fetchCategories()]);
       setLoading(false);
     };
 
@@ -412,10 +415,7 @@ export default function BudgetPage() {
 }
 
 // Circular Progress with Label component
-function CircularProgressWithLabel({
-  value,
-  isOverBudget,
-}: {
+function CircularProgressWithLabel(props: {
   value: number;
   isOverBudget: boolean;
 }): JSX.Element {
@@ -423,8 +423,8 @@ function CircularProgressWithLabel({
     <Box sx={{ position: 'relative', display: 'inline-flex' }}>
       <CircularProgress
         variant="determinate"
-        value={Math.min(value, 100)}
-        sx={{ color: isOverBudget ? 'error.main' : 'success.main' }}
+        value={Math.min(props.value, 100)}
+        sx={{ color: props.isOverBudget ? 'error.main' : 'success.main' }}
         size={150}
       />
       <Box
@@ -439,8 +439,8 @@ function CircularProgressWithLabel({
           justifyContent: 'center',
         }}
       >
-        <Typography variant="h6" component="div" color={isOverBudget ? 'error' : 'text.primary'}>
-          {isOverBudget ? 'Over Budget' : `${Math.min(value, 100).toFixed(1)}%`}
+        <Typography variant="h6" component="div" color={props.isOverBudget ? 'error' : 'text.primary'}>
+          {props.isOverBudget ? 'Over Budget' : `${Math.min(props.value, 100).toFixed(1)}%`}
         </Typography>
       </Box>
     </Box>

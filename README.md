@@ -15,9 +15,9 @@ A financial management dashboard built with Next.js and Material-UI, featuring t
 
 1. Install dependencies:
 ```bash
-pnpm install
+pnpm install -f
 # or
-npm install
+npm install -f
 ```
 
 2. Run development server:

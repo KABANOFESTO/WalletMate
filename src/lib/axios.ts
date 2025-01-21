@@ -4,6 +4,8 @@ const axiosInstance = axios.create({
   baseURL: 'http://localhost:8081/api'
 });
 
+export default axiosInstance;
+
 // Add a request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
@@ -31,5 +33,3 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-export default axiosInstance;

@@ -30,106 +30,123 @@ const validationSchema = Yup.object({
   password: Yup
     .string()
     .max(255)
-    .required('Password is required')
+    .required('Password is required'),
 });
 
-export function SignInForm(): React.JSX.Element {
+export function LoginForm(): React.JSX.Element {
   const router = useRouter();
-  const { setUser } = useAuth();
-  const [showPassword, setShowPassword] = React.useState<boolean>();
-  const [error, setError] = React.useState('');
+  const auth = useAuth();
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   const formik = useFormik({
     initialValues: {
       email: '',
       password: '',
-      submit: null
+      submit: null,
     },
     validationSchema,
-    onSubmit: async (values, helpers) => {
+    onSubmit: async (values, helpers): Promise<void> => {
       try {
-        const response = await login({
-          email: values.email,
-          password: values.password
-        });
-        if (response.user) {
-          setUser(response.user);
-          router.push('/dashboard');
-        } else {
-          throw new Error(response.error || 'Login failed');
-        }
+        setError(null);
+        const user = await login({ email: values.email, password: values.password });
+        auth.setUser(user);
+        helpers.setStatus({ success: true });
+        helpers.setSubmitting(false);
+        router.push(paths.dashboard.overview);
       } catch (err) {
         helpers.setStatus({ success: false });
-        helpers.setErrors({ submit: 'Invalid email or password' });
         helpers.setSubmitting(false);
         setError('Invalid email or password');
       }
-    }
+    },
   });
 
   return (
-    <Stack spacing={4}>
-      <Stack spacing={1}>
-        <Typography variant="h4">Sign in</Typography>
-        <Typography color="text.secondary" variant="body2">
-          Don&apos;t have an account?{' '}
-          <Link component={RouterLink} href={paths.auth.signUp} underline="hover" variant="subtitle2">
-            Sign up
+    <form
+      noValidate
+      onSubmit={formik.handleSubmit}
+    >
+      <Stack spacing={3}>
+        <FormControl error={!!(formik.touched.email && formik.errors.email)}>
+          <InputLabel>
+            Email Address
+          </InputLabel>
+          <OutlinedInput
+            fullWidth
+            label="Email Address"
+            name="email"
+            onBlur={formik.handleBlur}
+            onChange={formik.handleChange}
+            type="email"
+            value={formik.values.email}
+          />
+          {formik.touched.email && formik.errors.email && (
+            <FormHelperText>
+              {formik.errors.email}
+            </FormHelperText>
+          )}
+        </FormControl>
+        <FormControl error={!!(formik.touched.password && formik.errors.password)}>
+          <InputLabel>
+            Password
+          </InputLabel>
+          <OutlinedInput
+            fullWidth
+            label="Password"
+            name="password"
+            onBlur={formik.handleBlur}
+            onChange={formik.handleChange}
+            type={showPassword ? 'text' : 'password'}
+            value={formik.values.password}
+            endAdornment={
+              <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                {showPassword ? <EyeSlash /> : <Eye />}
+              </IconButton>
+            }
+          />
+          {formik.touched.password && formik.errors.password && (
+            <FormHelperText>
+              {formik.errors.password}
+            </FormHelperText>
+          )}
+        </FormControl>
+        {error && (
+          <Alert severity="error">
+            {error}
+          </Alert>
+        )}
+        <Button
+          disabled={formik.isSubmitting}
+          fullWidth
+          size="large"
+          type="submit"
+          variant="contained"
+          color="primary"
+        >
+          Log In
+        </Button>
+        <Stack 
+          direction="row" 
+          justifyContent="space-between" 
+          spacing={2}
+        >
+          <Link
+            component={RouterLink}
+            href={paths.auth.signUp}
+            variant="body2"
+          >
+            Create new account
           </Link>
-        </Typography>
-      </Stack>
-      {error && (
-        <Alert severity="error" sx={{ width: '100%' }}>
-          {error}
-        </Alert>
-      )}
-      <form onSubmit={formik.handleSubmit}>
-        <Stack spacing={2}>
-          <FormControl error={Boolean(formik.errors.email)}>
-            <InputLabel>Email address</InputLabel>
-            <OutlinedInput
-              id="email"
-              name="email"
-              type="email"
-              value={formik.values.email}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-            />
-            {formik.errors.email ? <FormHelperText>{formik.errors.email}</FormHelperText> : null}
-          </FormControl>
-          <FormControl error={Boolean(formik.errors.password)}>
-            <InputLabel>Password</InputLabel>
-            <OutlinedInput
-              id="password"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              value={formik.values.password}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              endAdornment={
-                <IconButton
-                  aria-label="toggle password visibility"
-                  onClick={() => {
-                    setShowPassword(!showPassword);
-                  }}
-                  edge="end"
-                  sx={{ mr: -1 }}
-                >
-                  {showPassword ? (
-                    <EyeSlash fontSize="var(--icon-fontSize-md)" />
-                  ) : (
-                    <Eye fontSize="var(--icon-fontSize-md)" />
-                  )}
-                </IconButton>
-              }
-            />
-            {formik.errors.password ? <FormHelperText>{formik.errors.password}</FormHelperText> : null}
-          </FormControl>
-          <Button disabled={formik.isSubmitting} type="submit" variant="contained" fullWidth>
-            Sign in
-          </Button>
+          <Link
+            component={RouterLink}
+            href={paths.auth.forgotPassword}
+            variant="body2"
+          >
+            Forgot password?
+          </Link>
         </Stack>
-      </form>
-    </Stack>
+      </Stack>
+    </form>
   );
 }

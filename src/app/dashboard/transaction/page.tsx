@@ -23,10 +23,10 @@ const mapTransaction = (tx: BackendTransaction) => ({
   description: tx.description || '',
   amount: tx.amount,
   type: tx.type === 'INCOME' ? 'Credit' : 'Debit',
-  category: tx.category.name,
+  category: tx.category?.name || 'Uncategorized',
   date: new Date(tx.date),
   avatar: '', // Could be added later for category icons
-  accountType: tx.account.type
+  accountType: tx.account?.type || 'Unknown'
 });
 
 export default function Page(): React.JSX.Element {

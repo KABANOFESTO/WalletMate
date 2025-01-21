@@ -21,7 +21,8 @@ import axios from 'axios';
 // Define routes constant
 const ROUTES = {
   auth: {
-    signIn: '/auth/sign-in', // Adjust this path according to your routing structure
+    login: '/auth/sign-in', // Adjust this path according to your routing structure
+    signUp: '/auth/sign-up',
   },
 } as const;
 
@@ -58,7 +59,7 @@ export function SignUpForm(): React.JSX.Element {
 
         if (response.status === 201) {
           // Redirect to sign in page on success
-          window.location.href = ROUTES.auth.signIn;
+          window.location.href = ROUTES.auth.login;
         }
       } catch (error: any) {
         setError('root', {
@@ -78,7 +79,7 @@ export function SignUpForm(): React.JSX.Element {
         <Typography variant="h4">Sign up</Typography>
         <Typography color="text.secondary" variant="body2">
           Already have an account?{' '}
-          <Link component={RouterLink} href={ROUTES.auth.signIn} underline="hover" variant="subtitle2">
+          <Link component={RouterLink} href={ROUTES.auth.login} underline="hover" variant="subtitle2">
             Sign in
           </Link>
         </Typography>

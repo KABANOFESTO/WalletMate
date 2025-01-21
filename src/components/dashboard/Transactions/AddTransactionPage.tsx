@@ -20,6 +20,7 @@ import { Save, Banknote, FolderTree, Calendar, X } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useAuth } from '@/hooks/use-auth';
 import { createTransaction } from '@/services/transaction';
+import { toast } from 'react-toastify';
 
 interface AddTransactionDialogProps {
     open: boolean;
@@ -35,18 +36,18 @@ export function AddTransactionDialog({ open, onClose }: AddTransactionDialogProp
         description: string;
         amount: string;
         type: 'INCOME' | 'EXPENSE';
-        category: string;
+        category: { id: number; name: string };
         subcategory: string;
         date: string;
-        accountType: 'BANK' | 'MOBILE_MONEY' | 'CASH';
+        account: { id: number; name: string; type: 'BANK' | 'MOBILE_MONEY' | 'CASH'; balance: number };
     }>({
         description: '',
         amount: '',
         type: 'EXPENSE',
-        category: '',
+        category: { id: 1, name: '' },
         subcategory: '',
         date: dayjs().format('YYYY-MM-DD'),
-        accountType: 'BANK',
+        account: { id: 1, name: '', type: 'BANK', balance: 0 },
     });
 
     // Reset form when dialog opens
@@ -56,10 +57,10 @@ export function AddTransactionDialog({ open, onClose }: AddTransactionDialogProp
                 description: '',
                 amount: '',
                 type: 'EXPENSE',
-                category: '',
+                category: { id: 1, name: '' },
                 subcategory: '',
                 date: dayjs().format('YYYY-MM-DD'),
-                accountType: 'BANK',
+                account: { id: 1, name: '', type: 'BANK', balance: 0 },
             });
             setError(null);
         }
@@ -71,6 +72,30 @@ export function AddTransactionDialog({ open, onClose }: AddTransactionDialogProp
         setTransaction((prev) => ({
             ...prev,
             [field]: event.target.value,
+        }));
+    };
+
+    const handleAccountTypeChange = (
+        event: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        setTransaction((prev) => ({
+            ...prev,
+            account: {
+                ...prev.account,
+                type: event.target.value as 'BANK' | 'MOBILE_MONEY' | 'CASH'
+            }
+        }));
+    };
+
+    const handleCategoryChange = (
+        event: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        setTransaction((prev) => ({
+            ...prev,
+            category: {
+                ...prev.category,
+                name: event.target.value
+            }
         }));
     };
 
@@ -91,27 +116,16 @@ export function AddTransactionDialog({ open, onClose }: AddTransactionDialogProp
             }
 
             await createTransaction({
+                accountId: transaction.account.id,
                 description: transaction.description,
                 amount: amount,
                 type: transaction.type,
-                date: transaction.date,
-                category: {
-                    id: 1, // You'll need to get these from your backend
-                    name: transaction.category
-                },
-                subcategory: transaction.subcategory ? {
-                    id: 1, // You'll need to get these from your backend
-                    name: transaction.subcategory
-                } : undefined,
-                account: {
-                    id: 1, // You'll need to get these from your backend
-                    name: transaction.accountType,
-                    type: transaction.accountType,
-                    balance: 0
-                }
+                date: transaction.date || new Date().toISOString().split('T')[0],
+                categoryId: transaction.category.id
             });
 
             onClose();
+            toast.success('Transaction created successfully');
         } catch (err) {
             console.error('Failed to create transaction:', err);
             setError(err instanceof Error ? err.message : 'Failed to create transaction');
@@ -196,8 +210,8 @@ export function AddTransactionDialog({ open, onClose }: AddTransactionDialogProp
                                 select
                                 label="Account Type"
                                 fullWidth
-                                value={transaction.accountType}
-                                onChange={handleChange('accountType')}
+                                value={transaction.account.type}
+                                onChange={handleAccountTypeChange}
                                 required
                             >
                                 <MenuItem value="BANK">Bank Account</MenuItem>
@@ -228,8 +242,8 @@ export function AddTransactionDialog({ open, onClose }: AddTransactionDialogProp
                             <TextField
                                 label="Category"
                                 fullWidth
-                                value={transaction.category}
-                                onChange={handleChange('category')}
+                                value={transaction.category.name}
+                                onChange={handleCategoryChange}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">

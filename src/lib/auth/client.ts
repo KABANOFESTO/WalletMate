@@ -25,11 +25,11 @@ export interface SignUpParams {
   password: string;
 }
 
-export interface SignInWithOAuthParams {
-  provider: 'google' | 'discord';
+export interface LoginWithOAuthParams {
+  provider: string;
 }
 
-export interface SignInWithPasswordParams {
+export interface LoginWithPasswordParams {
   email: string;
   password: string;
 }
@@ -49,11 +49,11 @@ class AuthClient {
     return {};
   }
 
-  async signInWithOAuth(_: SignInWithOAuthParams): Promise<{ error?: string }> {
-    return { error: 'Social authentication not implemented' };
+  async loginWithOAuth(_: LoginWithOAuthParams): Promise<{ error?: string }> {
+    return { error: 'OAuth is not implemented' };
   }
 
-  async signInWithPassword(params: SignInWithPasswordParams): Promise<{ error?: string }> {
+  async loginWithPassword(params: LoginWithPasswordParams): Promise<{ error?: string }> {
     const { email, password } = params;
 
     // Make API request
