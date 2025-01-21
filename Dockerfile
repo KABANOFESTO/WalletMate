@@ -12,11 +12,11 @@ FROM eclipse-temurin:17-jre-focal
 
 # Install MySQL and configure it
 RUN apt-get update && \
-    apt-get install -y mysql-server curl && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server curl && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /var/run/mysqld /var/lib/mysql && \
     chown -R mysql:mysql /var/run/mysqld /var/lib/mysql && \
-    echo '[mysqld]\nbind-address = 0.0.0.0\nport = 3306\nmax_connections = 20\ninnodb_buffer_pool_size = 64M\nkey_buffer_size = 16M\nthread_cache_size = 4\nquery_cache_size = 8M' > /etc/mysql/conf.d/mysql.cnf
+    echo '[mysqld]\nuser=mysql\nbind-address=0.0.0.0\nport=3306\nmax_connections=20\ninnodb_buffer_pool_size=64M\nkey_buffer_size=16M\nthread_cache_size=4\nquery_cache_size=8M\nskip-host-cache\nskip-name-resolve' > /etc/mysql/conf.d/mysql.cnf
 
 # Copy MySQL initialization script
 COPY update_password.sql /docker-entrypoint-initdb.d/
@@ -38,31 +38,43 @@ ENV SPRING_DATASOURCE_PASSWORD=123456
 # Create startup script
 COPY <<EOF /app/start.sh
 #!/bin/bash
+set -e
 
 # Initialize MySQL data directory if needed
 if [ ! -d "/var/lib/mysql/mysql" ]; then
+    echo "Initializing MySQL data directory..."
+    mkdir -p /var/lib/mysql
+    chown -R mysql:mysql /var/lib/mysql
     mysqld --initialize-insecure --user=mysql
 fi
 
-# Start MySQL and wait for it to be ready
-service mysql start
+# Create MySQL directories and set permissions
+mkdir -p /var/run/mysqld
+chown -R mysql:mysql /var/run/mysqld /var/lib/mysql
+
+# Start MySQL in the background
+echo "Starting MySQL..."
+mysqld --user=mysql &
+
+# Wait for MySQL to be ready
 max_tries=30
 count=0
 echo "Waiting for MySQL to start..."
-while ! mysqladmin ping -h localhost -u root -p\${MYSQL_ROOT_PASSWORD} --silent; do
+while ! mysqladmin ping -h localhost --silent; do
     sleep 2
     count=$((count+1))
     if [ $count -ge $max_tries ]; then
-        echo "Failed to connect to MySQL after $max_tries attempts"
+        echo "Failed to connect to MySQL after $count attempts"
         exit 1
     fi
     echo "Attempt $count of $max_tries..."
 done
 
-# Initialize database
-echo "Initializing database..."
-mysql -u root -p\${MYSQL_ROOT_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS \${MYSQL_DATABASE};"
-mysql -u root -p\${MYSQL_ROOT_PASSWORD} \${MYSQL_DATABASE} < /docker-entrypoint-initdb.d/update_password.sql
+# Set root password and create database
+echo "Configuring MySQL..."
+mysqladmin -u root password "\${MYSQL_ROOT_PASSWORD}"
+mysql -u root -p"\${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE IF NOT EXISTS \${MYSQL_DATABASE};"
+mysql -u root -p"\${MYSQL_ROOT_PASSWORD}" \${MYSQL_DATABASE} < /docker-entrypoint-initdb.d/update_password.sql
 
 # Start Spring Boot application with memory constraints
 echo "Starting Spring Boot application..."
